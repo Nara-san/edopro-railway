@@ -1,15 +1,24 @@
-FROM dyxel/multirole:latest
+FROM node:18-alpine
 
-# 작업 디렉토리 설정 (디렉토리가 없으면 생성됨)
 WORKDIR /app
 
-# Railway 포트 환경변수 설정
-ENV PORT=${PORT:-7911}
-
-# 설정 파일 생성 (작업 디렉토리에)
-RUN echo "{\"port\": ${PORT:-7911}, \"maxRooms\": 10, \"concurrencyHint\": -1}" > config.json
+# 간단한 Node.js 서버 생성
+RUN echo 'const net = require("net"); \
+const port = process.env.PORT || 7911; \
+const server = net.createServer((socket) => { \
+  console.log("Client connected"); \
+  socket.on("data", (data) => { \
+    console.log("Received:", data.toString()); \
+    socket.write("Hello from EDOPro server"); \
+  }); \
+  socket.on("end", () => { \
+    console.log("Client disconnected"); \
+  }); \
+}); \
+server.listen(port, "0.0.0.0", () => { \
+  console.log(`EDOPro server listening on port ${port}`); \
+});' > server.js
 
 EXPOSE $PORT
 
-# multirole 실행 파일 찾아서 실행
-CMD ["sh", "-c", "find / -name multirole -type f 2>/dev/null | head -1 | xargs -I {} {} || echo 'Multirole executable not found'"]
+CMD ["node", "server.js"]
